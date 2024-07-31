@@ -1,0 +1,90 @@
+name: PR Check
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened       # When a PR is created
+      - edited       # When a PR's title or body is edited
+
+jobs:
+  pr-check:
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      - name: Validate PR description
+        id: validate
+        continue-on-error: true
+        run: |
+          PR_BODY=$(jq -r .pull_request.body "$GITHUB_EVENT_PATH")
+
+          SUMMARY_PATTERN='Summary.*'
+          JIRA_PATTERN='Jira Ticket.*'
+          DESCRIPTION_PATTERN='Description.*'
+          TESTING_PATTERN='Testing Instructions.*'
+          SCREENSHOTS_PATTERN='Screenshots.*'
+          NOTES_PATTERN='Additional Notes.*'
+          
+          ERROR_MSG=""
+
+          if ! echo "$PR_BODY" | grep -qE "$SUMMARY_PATTERN"; then
+            ERROR_MSG="${ERROR_MSG}\n- Summary is missing."
+          fi
+
+          if ! echo "$PR_BODY" | grep -qE "$DESCRIPTION_PATTERN"; then
+            ERROR_MSG="${ERROR_MSG}\n- Description is missing."
+          fi
+
+          if ! echo "$PR_BODY" | grep -qE "$JIRA_PATTERN"; then
+            ERROR_MSG="${ERROR_MSG}\n- Jira link is missing or incorrect."
+          fi
+
+          if ! echo "$PR_BODY" | grep -qE "$TESTING_PATTERN"; then
+            ERROR_MSG="${ERROR_MSG}\n- Testing Instructions are missing."
+          fi
+
+          if ! echo "$PR_BODY" | grep -qE "$SCREENSHOTS_PATTERN"; then
+            ERROR_MSG="${ERROR_MSG}\n- Screenshots section is missing."
+          fi
+
+          if ! echo "$PR_BODY" | grep -qE "$NOTES_PATTERN"; then
+            ERROR_MSG="${ERROR_MSG}\n- Additional Notes are missing."
+          fi
+
+          if [ -z "$ERROR_MSG" ]; then
+            echo "PR description check passed!" | tee /tmp/validation_result.txt
+            echo 'success' > /tmp/validation_status.txt
+          else
+            echo -e "${ERROR_MSG}" | tee /tmp/validation_result.txt
+            echo 'failure' > /tmp/validation_status.txt
+          fi
+
+      - name: Read validation result
+        id: result
+        run: |
+          RESULT=$(cat /tmp/validation_result.txt)
+          STATUS=$(cat /tmp/validation_status.txt)
+          echo "RESULT<<EOF" >> $GITHUB_ENV
+          echo "$RESULT" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+          echo "STATUS=$STATUS" >> $GITHUB_ENV
+
+      - name: Create or update PR comment
+        uses: peter-evans/create-or-update-comment@v4
+        env:
+          RESULT: ${{ env.RESULT }}
+        with:
+          issue-number: ${{github.event.pull_request.number}}
+          body: |
+            **PR Description Validation Result:**
+            ${{ env.RESULT }}
+      
+      - name: Fail the job if validation check failed
+        if: env.STATUS == 'failure'
+        run: |
+          echo "Failing the job due to validation errors."
+          exit 1
