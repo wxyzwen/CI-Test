@@ -6,7 +6,7 @@ on:
       - main
     types:
       - opened       # When a PR is created
-      - edited       # When a PR's title or body is edited
+      # - edited       # When a PR's title or body is edited
 
 jobs:
   pr-check:
@@ -16,12 +16,17 @@ jobs:
       - name: Install jq
         run: sudo apt-get install -y jq
 
+      - name: echo shit
+        run: |
+          echo "Pull Request Body: ${{ github.event.pull_request.body }}"
+
       - name: Validate PR description
         id: validate
         continue-on-error: true
         run: |
           PR_BODY=$(jq -r .pull_request.body "$GITHUB_EVENT_PATH")
-
+          echo "$PR_BODY"
+          
           SUMMARY_PATTERN='Summary.*'
           JIRA_PATTERN='Jira Ticket.*'
           DESCRIPTION_PATTERN='Description.*'
