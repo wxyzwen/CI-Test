@@ -6,7 +6,7 @@ on:
       - main
     types:
       - opened       # When a PR is created
-      - edited       # When a PR's title or body is edited
+      # - edited       # When a PR's title or body is edited
 
 jobs:
   pr-check:
