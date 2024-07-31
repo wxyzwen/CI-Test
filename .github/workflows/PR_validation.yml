@@ -73,16 +73,6 @@ jobs:
           echo "$RESULT" >> $GITHUB_ENV
           echo "EOF" >> $GITHUB_ENV
           echo "STATUS=$STATUS" >> $GITHUB_ENV
-
-      - name: Create or update PR comment
-        uses: peter-evans/create-or-update-comment@v4
-        env:
-          RESULT: ${{ env.RESULT }}
-        with:
-          issue-number: ${{github.event.pull_request.number}}
-          body: |
-            **PR Description Validation Result:**
-            ${{ env.RESULT }}
       
       - name: Fail the job if validation check failed
         if: env.STATUS == 'failure'
