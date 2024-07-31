@@ -68,5 +68,8 @@ jobs:
         run: |
           RESULT=$(cat /tmp/validation_result.txt)
           STATUS=$(cat /tmp/validation_status.txt)
-          echo "$RESULT"
-          echo "STATUS=$STATUS"
+          echo "RESULT<<EOF" >> $GITHUB_ENV
+          echo "$RESULT" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+          echo "STATUS=$STATUS" >> $GITHUB_ENV
+
